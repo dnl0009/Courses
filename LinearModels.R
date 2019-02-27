@@ -319,3 +319,9 @@ logl <- function(params,data){
 
 beachoptim <- optim(par = c(35000,0,-30000, -30000,0,0,0), fn=logl, method = 'BFGS',data=beach)
 
+# USE least squares to create the coefficients to create the 
+# line that minimizes the distance between the line and the dots 
+# in the scatter.
+
+# Left tail is more precise than the right tail, so it doesn't get 
+# the exact p-value as the model output.
