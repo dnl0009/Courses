@@ -1,0 +1,235 @@
+---
+title: "Pois Pratice"
+author: "Darien Lozon"
+date: "March 2, 2019"
+output: html_document
+---
+
+1. Fit a Poisson regression model that assumes expected counts are an interactive function of variables x1 and x2.
+```{r}
+setwd("C:/Users/Darien Lozon/Google Drive/SP19 Courses/WMAN633/")
+data <- read.csv("Poisson Data.csv",header=TRUE)
+
+fit <- glm(y~x1*x2,poisson,data)
+summary(fit)
+```
+
+---
+
+2. Interpret the effect of variable x1 on the proportional change in expected count when the x2 is fixed at "b", and again when x2 is fixed at "c". Verify your interpretation in R.
+
+Because there is an interactive term between the continuous and categorical predictors (x1 and x2, respectively), there is an _effective_ log proportional change that needs to be calculated because there is a rate of change associated with x1 on its own _in addition to_ the interaction for each category B and C (which are associated with the difference between that category and the reference, A). With this said, the effect of x1 on the log proportional change of the expected count when x2 is B is -0.077 with each 1-unit increase in x1. When x2 is C, however, there is a 0.132 decrease in lambda with each 1-unit increase in x1. Both of these are equivalent values to the effective log proportional changes.
+
+```{r}
+b <- coef(fit)
+
+# X2 is fixed at B; anything with C is null.
+x1_0b <- b[1] + b[3] 
+x1_1b <- b[1] + b[2] + b[3] + b[5]
+log(exp(x1_1b)/exp(x1_0b)); b[2] + b[5] # These values are equivalent because a 1-unit change in x1 is the effective log proportional change in the expected count (lambda), which is equal to the two coefficients associated with X1.
+
+# X2 is fixed at C; anything with B is null.
+x1_0c <- b[1] + b[4] 
+x1_1c <- b[1] + b[2] + b[4] + b[6]
+log(exp(x1_1c)/exp(x1_0c)); b[2] + b[6]
+```
+
+---
+
+3. Interpret the effect of variable x2 on the proportional change in expected count when variable x1 is held at its mean. Verify your interpretation in R.
+
+For x2, it is similar to #2 where we have to account for the effective log proportional change. The x2 value is either 1 or 0, depending on what category is in question, AND x1 is held at its mean, so we need to make sure to multiply it by the interaction coefficient (it's not set at 1 like the categories are). With that said, with the reference log proportional change at category A being an increase of 0.284, category B increases lambda at a rate of 0.717 while category C increases lambda at a rate of 0.0403. This can be confirmed by the effective log proportional changes.
+
+```{r}
+x1 <- mean(data$x1)
+x2_b0 <- b[1] + b[2] * x1 + (b[3] + b[5] * x1) # No C (Predictor B)
+x2_00 <- b[1] + b[2] * x1 # No B or C (Reference A) 
+x2_0c <- b[1] + b[2] * x1 + (b[4] + b[6] * x1) # No B (Predictor C)
+
+log(exp(x2_b0)/exp(x2_00)) # Difference between B and A
+b[3] + b[5] * x1 # Verify effective coefficient
+log(exp(x2_0c)/exp(x2_00)) # Difference between C and A
+b[4] + b[6] * x1 # Verify effective coefficient
+```
+
+---
+
+4. Duplicate the Wald Test and p-values for all variables. Do you reject or fail to reject your null hypotheses?
+
+```{r}
+# Index summary values
+se <- summary(fit)[['coefficients']][,'Std. Error']
+Wald <- summary(fit)[['coefficients']][,'z value']
+p <- summary(fit)[['coefficients']][,'Pr(>|z|)']
+
+# Calculate Wald tests and compare to summary
+Wint <- b[1]/se[1]; Wint; Wald[1]
+Wx1b <- b[2]/se[2]; Wx1b; Wald[2]
+Wx2b <- b[3]/se[3]; Wx2b; Wald[3]
+Wx2c <- b[4]/se[4]; Wx2c; Wald[4]
+WXb  <- b[5]/se[5]; WXb;  Wald[5]
+WXc  <- b[6]/se[6]; WXc;  Wald[6]
+
+# Index Wald test values
+WALD_TEST <- c(Wint,Wx1b,Wx2b,Wx2c,WXb,WXc)
+
+# Calculate p-values with above calculated Z values and compare to summary(fit)
+P_TEST <- 2 * pnorm(-1 * abs(WALD_TEST)); P_TEST; p
+```
+
+REJECT or FAIL TO REJECT null hypothesis based on p-values?
+
+**Intercept:** FAIL TO REJECT,
+**x1:**        REJECT,
+**x2b:**       REJECT,
+**x2c:**       FAIL TO REJECT,
+**x1:x2b:**    REJECT, and
+**x1:x2c:**    REJECT
+
+---
+
+5. Predict and plot the expected count over the range of values of x1. Do this for all levels of your categorical preditor x2. Construct and plot 90% confidence intervals for all predictors.
+
+**For Category A**
+
+```{r}
+nda <- data.frame(
+  x1 = seq(min(data$x1),max(data$x1),length.out=100),
+  x2 = factor(rep('a',100),
+              levels=c('a','b','c'))
+)
+
+head(nda)
+
+predA <- predict.glm(fit,nda,'link',TRUE)
+lo <- exp(predA$fit - qnorm(.95) * predA$se.fit)
+hi <- exp(predA$fit + qnorm(.95) * predA$se.fit)
+plot(x=nda$x1,y=exp(predA$fit),type='l',main="Change in Expected Count at Category A",xlab='x1',ylab='Expected Count',ylim=c(min(lo),max(hi)))
+lines(x=nda$x1,y=lo,col='blue',lty=3)
+lines(x=nda$x1,y=hi,col='red',lty=3)
+```
+
+**For Category B**
+
+```{r}
+ndb <- data.frame(
+  x1 = seq(min(data$x1),max(data$x1),length.out=100),
+  x2 = factor(rep('b',100),
+              levels=c('a','b','c'))
+)
+
+head(ndb)
+
+predB <- predict.glm(fit,ndb,'link',TRUE)
+lo <- exp(predB$fit - qnorm(.95) * predB$se.fit)
+hi <- exp(predB$fit + qnorm(.95) * predB$se.fit)
+plot(x=ndb$x1,y=exp(predB$fit),type='l',main="Change in Expected Count at Category B",xlab='x1',ylab='Expected Count',ylim=c(min(lo),max(hi)))
+lines(x=ndb$x1,y=lo,col='blue',lty=3)
+lines(x=ndb$x1,y=hi,col='red',lty=3)
+```
+
+**For Category C**
+
+```{r}
+ndc <- data.frame(
+  x1 = seq(min(data$x1),max(data$x1),length.out=100),
+  x2 = factor(rep('c',100),
+              levels=c('a','b','c'))
+)
+
+head(ndc)
+
+predC <- predict.glm(fit,ndc,'link',TRUE)
+lo <- exp(predC$fit - qnorm(.95) * predC$se.fit)
+hi <- exp(predC$fit + qnorm(.95) * predC$se.fit)
+plot(x=ndc$x1,y=exp(predC$fit),type='l',main="Change in Expected Count at Category C",xlab='x1',ylab='Expected Count',ylim=c(min(lo),max(hi)))
+lines(x=ndc$x1,y=lo,col='blue',lty=3)
+lines(x=ndc$x1,y=hi,col='red',lty=3)
+```
+
+---
+
+6. Predict and plot the expected count over all levels of your categorical predictor x2, while holding x1 at its mean. Construct and plot 90% confidence intervals.
+
+```{r}
+A <- data.frame(
+  x1 = mean(data$x1),
+  x2 = factor('a',levels=c('a','b','c'))
+)
+
+preda <- predict.glm(fit,A,'link',TRUE)
+loa <- exp(preda$fit - qnorm(.95) * preda$se.fit)
+hia <- exp(preda$fit + qnorm(.95) * preda$se.fit)
+
+B <- data.frame(
+  x1 = mean(data$x1),
+  x2 = factor('b',levels=c('a','b','c'))
+)
+
+predb <- predict.glm(fit,B,'link',TRUE)
+lob <- exp(predb$fit - qnorm(.95) * predb$se.fit)
+hib <- exp(predb$fit + qnorm(.95) * predb$se.fit)
+
+C <- data.frame(
+  x1 = mean(data$x1),
+  x2 = factor('c',levels=c('a','b','c'))
+)
+
+predc <- predict.glm(fit,C,'link',TRUE)
+loc <- exp(predc$fit - qnorm(.95) * predc$se.fit)
+hic <- exp(predc$fit + qnorm(.95) * predc$se.fit)
+
+df <- data.frame(
+  exp = c(exp(preda$fit),exp(predb$fit),exp(predc$fit)), # Need to calculate EXPected predicted values to be within the same realm of the confidence intervals.
+  group=factor(c('a','b','c')),
+  upper=c(hia,hib,hic),
+  lower=c(loa,lob,loc)
+)
+
+library(ggplot2)
+p <- ggplot(df,aes(group,exp,color=group))
+p + geom_pointrange(aes(ymin=lower,ymax=upper))
+```
+
+---
+
+7. Use contrasts to determine if the expected count at level 'b' is different than level 'c' when x1 = -1, and again when x1 = 1.
+
+```{r}
+library(multcomp)
+#b[1] + b[2] * -1 + b[3] * 1 + b[4] * 0 + b[5] * -1 * 1 + b[6] * -1 * 0
+#b[1] + b[2] * -1 + b[3] * 0 + b[4] * 1 + b[5] * -1 * 0 + b[6] * -1 * 1
+
+Xn <- matrix(c(0,0,1,1,-1,-1),nrow=1)
+conN <- glht(fit,linfct=Xn); conN
+0 + 0 + b[3] * 1 + b[4] * 1 + b[5] * -1 * 1 + b[6] * -1 * 1 # SAME! :D
+
+X1 <- matrix(c(0,0,1,1,1,1), nrow=1)
+con1 <- glht(fit,linfct=X1); con1
+0 + 0 + b[3] + b[4] + b[5] + b[6] 
+```
+
+---
+
+8. Evaluate the probability mass function of each of your observations. Use your fitted model to calculate the expected count at each observation.
+
+```{r}
+l <- mean(data$y)
+y <- seq(min(data$y),max(data$y),length.out=100)
+pmf <- (l^y)*exp(-l)/factorial(y)
+plot(x=y,y=pmf,type='l',xlab='y',ylab='PMF')
+tail(dpois(data$y,
+      predict(fit,type='response')))
+data$y[100]
+predict(fit,type='response')[100] # 25% chance of observing 2 counts
+```
+
+---
+
+9. Evaluate the sum of the log likelihood of your observed data. Use your fitted model to calculate the expected count at each observation.
+
+```{r}
+sum(dpois(data$y,fit$fitted.values,log=T)) # E(Y) = EXPECTED Values = fitted values
+
+```
+
