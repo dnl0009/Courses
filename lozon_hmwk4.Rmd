@@ -31,7 +31,7 @@ summary(fit)[['coefficients']]['x1','Estimate'] # Woo, they're the same. :)
 
 ###**3. Interpret the effect of variable x2 on the log odds of success. Verify your interpretation in R.**
 
-The regression coefficient for x2 is the difference in the log odds ratio between categories A and B.
+The regression coefficient for x2 is the difference in the log odds ratio between categories A and B. ### LOG ODDS RATIO, NOT DIFFERENCE IN LOG ODDS RATIO.
 
 ```{r}
 pA <- plogis(b[1] + b[2]) #x2 = 0
