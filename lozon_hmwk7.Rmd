@@ -69,7 +69,7 @@ exp(b[2])
 new_p <- data.frame(j=seq(from=min(p),to=max(p),length.out=200))
 prd <- predict(object=fit,newdata=new_p,type='det')
 
-plot(x=new_p$j,y=exp(prd$Predicted),
+plot(x=new_p$j,y=exp(prd$Predicted), #mechanics good up to here; no exp
      main='Effects of Detection Covariate on Estimated Abundance',
      xlab='Detection',ylab='Estimated Abundance',type='l')
 lines(y=exp(prd$upper),x=new_p$j,col="red",lty=3) # Plot 95% confidence intervals
