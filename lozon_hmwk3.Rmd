@@ -1,0 +1,201 @@
+---
+title: 'Homework #3'
+author: "Darien Lozon"
+date: "January 29, 2019"
+output:
+  html_document: default
+  word_document: default
+---
+
+#### This homework is all about verifying output of a fitted linear model. We will use the same beach dataset from last homework. As before, start by fitting a model with OpenBeach as the response, and include an interaction between Year and BeachID.
+
+#### 1. Calculate the residuals. Use the summary() function applied to your numeric vector of residuals to verify that this matches the Residuals: quantiles reported from the summary of your fitted model.
+
+```{r}
+## Setting the stage ##
+setwd("C:/Users/dnl0009/Desktop/")
+beach <- read.csv("beach.csv",header=TRUE)
+
+## Fit model with interaction ##
+xmodel <- lm(OpenBeach~Year + BeachID + Year*BeachID,beach); xmodel
+betas <- coef(xmodel)
+
+# Models created from HW 2 will be the expected values
+# Data from beach.csv will be the actual values
+
+yearsA <- unique(beach$Year[beach$BeachID == 'A']) # Easy way of determining which years have data
+beachA <- betas[1] + betas[2] * yearsA
+actualA <- beach[beach$BeachID == 'A',3] 
+
+yearsB <- unique(beach$Year[beach$BeachID == 'B'])
+beachB <- betas[1] + betas[2] * yearsB + betas[3] + betas[5] * yearsB
+actualB <- beach[beach$BeachID == 'B',3]
+
+yearsC <- unique(beach$Year[beach$BeachID == 'C']) 
+beachC <- betas[1] + betas[2] * yearsC + betas[4] + betas[6] * yearsC
+actualC <- beach[beach$BeachID == 'C',3]
+
+## Calculate Residuals ## 
+# The difference between actual and expected
+residA <- actualA-beachA
+residB <- actualB-beachB
+residC <- actualC-beachC
+resid <- c(residA,residB,residC) # Combine three residuals to one list
+summary(resid) # Observe summary of residuals
+summary(summary(xmodel)[['residuals']]) # Compare to model residual summary
+
+# Note: Remember it's actual - expected, NOT expected - actual.
+# Everything is switched (signs and numbers) if you do it the latter way. 
+# Actual = (X,Y) point in scatterplot; Expected = Y-value on line at X.
+```
+
+---
+
+#### 2. Describe in writing the process used to obtain your estimated regression coefficients. You do not need to calculate these by hand, but I want to see that you understand how these quantities are obtained.
+
+When obtaining estimated regression coefficients, we want to ensure that the model fit minimizes residuals through calculating _least squares_. This idea of least squares is derived from the sum of squared error (or residuals, hereafter SSE), which can be calculated--as mentioned in the Note in #1--by finding the difference between the actual y value and the estimated y-hat value, **squaring** the differences, and _adding_ the squares (hence the name _sum_ of **squared** errors). 
+
+Below is an example data set to show how Q is calculated. The first graph shows the scatterplot (red) and fit model (blue). The second graph proves how Q changes with change in $\beta$<sub>0</sub>. I believe this process would then continue for each coefficient: the coefficient in question would change while other coefficients are held constant.
+
+```{r}
+# NOTE: Each time this chunk is run, the graphs will change because the points are randomly selected.
+
+x <- sample(0:10,15,replace=T) # Random sample of x values between 0 and 10
+y <- sample(0:10,15,replace=T) # Random sample of y values between 0 and 10
+xy <- lm(y~x)        # Fitted linear model for 10 above plotted (x,y) points
+beta <- coef(xy)    # Set aside coefficients
+plot(x=x,y=y,type='p', pch=17, col='red', main="Darien's Random Plot") # Plot random points
+abline(reg=c(beta[1],beta[2]),col='blue') # Plot linear model
+b0 <- seq(-70,75,length.out=100) # Change b0 values to see change in SSE
+b1 <- beta[2] # Value held constant from linear model xy
+
+# Assisted code from Dr. Rota {Thank you!}
+Q <- numeric(100)
+for(i in 1:length(Q)){
+  Q[i] <- sum(y-(b0[i] + b1*x))^2 # SSE calculation
+}
+
+plot(x=b0,y=Q,type='l',main='Change in Q with Changes in b0') # Plot parabola
+points(x=b0[Q==min(Q)],y=0,pch=4,col='red',cex=2)
+abline(h=0,v=b0[Q==min(Q)],lty=2,col='blue') # Minimum b0 value
+```
+
+This plot is important as the integral of the plotted curve (set to zero) can determine the value of $\beta$<sub>0</sub> that minimizes SSE (X marks the spot). 
+
+```{r}
+# Value of b0 that minimizes SSE
+b0[Q==min(Q)]
+# Compare to model coefficient
+summary(xy)[['coefficients']]['(Intercept)','Estimate']
+```
+
+These values are pretty close. My guess is the difference would be explained by the standard error of the intercept coefficient:
+```{r,echo=F}
+summary(xy)[['coefficients']]['(Intercept)','Std. Error']
+```
+
+---
+
+#### 3. Calculate test statistics for your regression coefficients. Verify by comparing to test statistics reported from model output.
+
+```{r}
+# Remember calculating the test statistic is the beta coefficient divided by the standard error.
+
+# For Intercept coefficient
+b1 <- betas[1] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['(Intercept)','Std. Error'] # Single out standard error
+ti <- b1/se
+
+# For Year coefficient
+b1 <- betas[2] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['Year','Std. Error'] # Single out standard error
+ty <- b1/se
+
+# For BeachIDB coefficient
+b1 <- betas[3] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['BeachIDB','Std. Error'] # Single out standard error
+tb <- b1/se
+
+# For BeachIDC coefficient
+b1 <- betas[4] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['BeachIDC','Std. Error'] # Single out standard error
+tc <- b1/se
+
+# For Year*BeachIDB coefficient
+b1 <- betas[5] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['Year:BeachIDB','Std. Error'] # Single out standard error
+tyb <- b1/se
+
+# For Year*BeachIDC coefficient
+b1 <- betas[6] # I already saved coefficients in #1
+se <- summary(xmodel)[['coefficients']]['Year:BeachIDC','Std. Error'] # Single out standard error
+tyc <- b1/se
+
+byhandT <- c(ti,ty,tb,tc,tyb,tyc); byhandT # Combine all numbers to give a pretty output that's easy to compare
+summary(xmodel)[['coefficients']][,'t value'] # Beach model test statistic outputs
+
+# IT'S A MATCH! :)
+```
+
+---
+
+#### 4. Calculate p-values for your regression coefficients. Verify by comparing to p-values reported from model output. What are the associated null hypotheses? Do you reject or fail to reject these null hypotheses? _Note: In the lecture slides, I reported test statistics are t-distributed with n-2 degrees of freedom. More generally, these test statistics are t-distributed with n-k degrees of freedom, where k is the number of regression coefficients in your linear model._
+
+For each of these tests, H<sub>0</sub> is $\beta$<sub>1</sub> = 0, $\beta$<sub>2</sub> = 0, $\beta$<sub>3</sub> = 0, $\beta$<sub>4</sub> = 0, and $\beta$<sub>5</sub> = 0. In essence, we are testing if each of these variables (year, beachID, and the interactions [year*beachID]) are significant predictors in the model.
+
+```{r}
+n <- nrow(beach) # number of observations
+k <- 6 # number of regression coefficients (intercept + parameters) 
+df <- n-k # generalized formula for degrees of freedom = n observations - k parameters = 56
+ 
+p1 <- pt(q = (-1 * abs(ti)),df = df) + (1-pt(q = abs(ti),df = df)); p1 # Calculated p-value
+summary(xmodel)[['coefficients']]['(Intercept)','Pr(>|t|)'] # Check with interaction model
+```
+
+Not a match; however, it does fulfill the requirement of the p-value being < 2e-16.
+
+```{r} 
+# Now we can do the same thing with the other five t values
+
+p2 <- pt(q = (-1 * abs(ty)),df = df) + (1-pt(q = abs(ty),df = df)) # This result is in the same boat as the intercept. Not exact, but it fulfills the condition of <2e-16
+p3 <- pt(q = (-1 * abs(tb)),df = df) + (1-pt(q = abs(tb),df = df))
+p4 <- pt(q = (-1 * abs(tc)),df = df) + (1-pt(q = abs(tc),df = df))
+p5 <- pt(q = (-1 * abs(tyb)),df = df) + (1-pt(q = abs(tyb),df = df))
+p6 <- pt(q = (-1 * abs(tyc)),df = df) + (1-pt(q = abs(tyc),df = df))
+
+# Now to compare to the summary
+
+pvalues <- c(p1,p2,p3,p4,p5,p6); pvalues
+summary(xmodel)[['coefficients']][,'Pr(>|t|)']
+```
+
+It's a pretty close match. Because these values are very small (e-11 to e-20), I would reject each null hypothesis, reporting that each predictor in the model is statistically significant to the $\alpha$ = 0.05 (or 0.1; whatever tickles your fancy, it doesn't matter--these values are so close to zero) level.
+
+---
+
+#### 5. Select a single regression coefficient (your choice) and devise a null hypothesis that is different from the default in lm(). Report the test statistics, your p-value, and whether you reject or fail to reject your null hypothesis.
+
+I'm very intrigued by the fact that the beach ID coefficients are so largely negative (so, I guess, incredibly small; I know why they're so negative, but why not test it?), so I would like to test if $\beta$<sub>3</sub> is ever 150:
+
+* H<sub>0</sub>: $\beta$<sub>3</sub> = 150 
+* H<sub>A</sub>: $\beta$<sub>3</sub> $\neq$ 150
+
+```{r}
+b1 <- betas[3]
+se <- summary(xmodel)[['coefficients']]['BeachIDB','Std. Error']
+t150 <- (b1-150)/se # Test Statistic Report
+n <- nrow(beach)
+k <- 6
+df <- n-k
+p150 <- pt(q = (-1 * abs(t150)),df = df) + (1-pt(q = abs(t150),df = df)); p150 # P-value Report
+```
+
+With the $\alpha$ = 0.05 level, I will need to reject the null hypothesis, which is confirmed by the model output:
+
+```{r,echo=F}
+summary(xmodel)[['coefficients']]['BeachIDB','Estimate']
+```
+
+---
+
+Le fin.

@@ -1,0 +1,110 @@
+---
+title: 'Homework #7'
+author: "Darien Lozon"
+date: "April 2, 2019"
+output: html_document
+---
+
+1. Load data and place into an unmarkedFramePCount object.
+
+```{r}
+# Set the stage #
+setwd("C:/Users/dnl0009/Google Drive/SP19 Courses/WMAN633/")
+library(unmarked)
+
+# Load and transform data #
+dat <- read.csv('count.csv')
+datmat <- as.matrix(dat)
+
+# Load covariate data # 
+p <- read.csv('obs_covs.csv')
+psi <- read.csv('site_covs.csv')
+site_covs <- list(
+   x1 = data.frame(psi[,'x1']),
+   x2 = data.frame(x2 = factor(psi$x2))
+)
+
+
+# Set up frame #
+nmix_dat <- unmarkedFramePCount(y=datmat,
+                                siteCovs=psi,
+                                obsCovs=list(j=p))
+```
+
+---
+
+2. Fit an N-mixture model that assumes conditional detection probability is a function of the detection covariate provided, and expected abundance is an additive function of variables x1 and x2.
+
+```{r}
+fit <- pcount(~j~x1+x2,nmix_dat,K=100)
+```
+
+---
+
+3. Interpret the effect of x1 on the expected count at each site. Verify your interpretation in R.
+
+With each unit increase in x1, there is an expected log proportional change of 0.37. To verify, I will assume x2 = A and observe what happens when there is a 1-unit change in x1 (from 0 to 1). The trick is to keep in mind that abundance is Poisson, so log(lambda) = b0+b1+...+ etc., so exponentiation is required to get at the true expected count.
+
+```{r}
+# Look over values #
+summary(fit)
+
+# Verify interpretation #
+b <- coef(fit) # Store coefficients for later; we'll need b[2] to compare at the end.
+z <- exp(b[1])
+o <- exp(b[1] + b[2])
+log(o/z) # larger number over smaller
+b[2]
+
+# Another way to confirm #
+o/z
+exp(b[2])
+```
+
+---
+
+4. Predict and plot the effect of the supplied detection covariate. Do this over the range of this covariate.
+
+```{r}
+new_p <- data.frame(j=seq(from=min(p),to=max(p),length.out=200))
+prd <- predict(object=fit,newdata=new_p,type='det')
+
+plot(x=new_p$j,y=exp(prd$Predicted),
+     main='Effects of Detection Covariate on Estimated Abundance',
+     xlab='Detection',ylab='Estimated Abundance',type='l')
+lines(y=exp(prd$upper),x=new_p$j,col="red",lty=3) # Plot 95% confidence intervals
+lines(y=exp(prd$lower),x=new_p$j,col="blue",lty=3)
+legend("topright",c('Prediction','Upper CI','Lower CI'),col=c('black','red','blue'),lty=c(1,3,3))
+```
+
+---
+
+5. Use contrasts to compare expected abundance between all pairwise levels of variable x2. Obtain p-values associated with each contrast and tell me whether you reject or fail to reject each null hypothesis tested.
+
+```{r}
+X <- matrix(c(0,0,1,-1,0,
+              0,0,1,0,-1,
+              0,0,0,1,-1),
+            nrow=3,byrow=TRUE)
+rownames(X) <- c('BC','BD','CD')
+colnames(X) <- c('b0','b1','b2','b3','b4')
+p_beta <- coef(fit)[1:5]
+mat <- X %*% p_beta
+
+vcov(fit)
+vcov_con <- X %*% vcov(fit)[1:5,1:5] %*% t(X); vcov_con
+
+se_con <- sqrt(diag(vcov_con)); se_con
+w <- (X %*% p_beta)/se_con; w
+p_val <- 2 * pnorm(-1 * abs(w)); p_val
+```
+
+The null hypothesis for these contrasts is the difference between the two groups is zero. Given the p-values from the contrasts, I would conclude the following:
+
+* Significance between B and C: DO NOT REJECT (there is no significant difference between these groups);
+* Significance between B and D: REJECT (these two groups are significantly different); and 
+* Significance between C and D: REJECT (these two groups are significantly different).
+
+---
+
+Le fin.

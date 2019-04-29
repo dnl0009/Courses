@@ -1,0 +1,105 @@
+---
+title: 'Homework #5'
+author: "Darien Lozon"
+date: "February 25, 2019"
+output: html_document
+---
+
+**1. Fit a Poisson regression model that assumes expected count is an interactive function of variables x1 and x2.**
+
+```{r}
+setwd("C:/Users/dnl0009/Google Drive/SP19 Courses/WMAN633/")
+data <- read.csv("Homework 5 Data.csv",header=TRUE)
+fit <- glm(y~x1*x2,poisson,data)
+summary(fit)
+```
+
+---
+
+**2. Interpret the effect of variable x1 on the expected count when x2 is fixed at level 'b'. Verify your interpretation in R.**
+
+The effect of x1 on the response is the combined log proportional change of x1 AND the interaction term x1x2 (also thought to be the effective log proportional change). With each 1-unit change in x1 with all other terms held constant (in this case, x2 = 1 for level B), the log of lambda increases by 0.3790225.
+
+```{r}
+b <- coef(fit)
+x1_1 <- exp(b[1] + (b[2] + b[4]) + b[3]) # Need to calculate the EXPected counts b/c LOG(lambda)= ...
+x1_2 <- exp(b[1] + 2*(b[2] + b[4]) + b[3])
+log(x1_2/x1_1) # Log proportional change
+b[2] + b[4] # Effective log proportional change with 1-unit change in x1
+```
+
+---
+
+**3. Interpret the effect of variable x2 on the expected count when x1 is fixed at 1. Verify your interpretation in R.**
+
+With all other predictors held constant (in this case, x1 = 1), the effect of variable x2 is similar to x1 because of the interaction term. Category B influences the expected count 0.5682285 times __LESS__ than category A.
+
+```{r}
+x2a <- exp(b[1] + b[2]) # x2 = 0
+x2b <- exp(b[1] + b[2] + b[3] + b[4]) # x2 = 1
+log(x2b/x2a)
+b[3] + b[4]
+```
+
+
+---
+
+**4. Predict the expected count, +/- 95% confidence intervals, over the observed range of values of x1, assuming x2 is fixed at level 'b'.**
+
+```{r}
+nd <- data.frame(
+  x1 = seq(min(data$x1),max(data$x1),length.out=100),
+  x2 = factor(x=rep('b',100),
+              levels=c('a','b'))
+)
+
+head(nd)
+
+pred <- predict.glm(fit,nd,'link',TRUE)
+low <- exp(pred$fit - qnorm(0.975) * pred$se.fit)
+hi <- exp(pred$fit + qnorm(0.975) * pred$se.fit)
+plot(x=nd$x1,y=exp(pred$fit),type='l',xlab='x1',ylab='Expected Count',ylim=c(min(low),max(hi)),main='Change in x1')
+lines(x=nd$x1,y=low,lty=3,col='blue')
+lines(x=nd$x1,y=hi,lty=3,col='red')
+legend("topleft",y=c('Fit','High','Low'),col=c('black','red','blue'),lty=c(1,3,3))
+```
+
+
+--- 
+
+**5. Predict the expected count, +/- 95% confidence intervals, of levels 'a' and 'b', assuming x1 is fixed at its mean.**
+
+```{r}
+a <- data.frame(
+  x1 = mean(data$x1),
+  x2 = factor(x=c('a'), levels = c('a','b'))
+)
+
+pred <- predict.glm(fit,a,'link',TRUE);pred
+low <- exp(pred$fit - qnorm(0.975) * pred$se.fit); low
+hi <- exp(pred$fit + qnorm(0.975) * pred$se.fit); hi
+
+b <- data.frame(
+  x1 = mean(data$x1),
+  x2 = factor(x=c('b'), levels = c('a','b'))
+)
+
+predb <- predict.glm(fit,b,'link',TRUE); predb
+lowb <- exp(predb$fit - qnorm(0.975) * predb$se.fit); lowb
+hib <- exp(predb$fit + qnorm(0.975) * predb$se.fit); hib
+
+df <- data.frame(
+  exp=c(exp(pred$fit),exp(predb$fit)),
+  group=factor(c('a','b')),
+  upper=c(hi,hib),
+  lower=c(low,lowb)
+)
+
+library(ggplot2)
+p <- ggplot(df,aes(group,exp,color=group))
+p + geom_pointrange(aes(ymin=lower,ymax=upper))
+```
+
+---
+
+Le fin.
