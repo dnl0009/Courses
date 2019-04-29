@@ -32,7 +32,7 @@ b[2] + b[4] # Effective log proportional change with 1-unit change in x1
 
 **3. Interpret the effect of variable x2 on the expected count when x1 is fixed at 1. Verify your interpretation in R.**
 
-With all other predictors held constant (in this case, x1 = 1), the effect of variable x2 is similar to x1 because of the interaction term. Category B influences the expected count 0.5682285 times __LESS__ than category A.
+With all other predictors held constant (in this case, x1 = 1), the effect of variable x2 is similar to x1 because of the interaction term. Category B influences the expected count 0.5682285 times __LESS__ than category A. ## 0.56 is LOG PROPORTIONAL CHANGE.
 
 ```{r}
 x2a <- exp(b[1] + b[2]) # x2 = 0
