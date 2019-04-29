@@ -40,7 +40,7 @@ summary(fit)
 
 3. Interpret the effect of the number of people photographed at each site on conditional detection probability of bobcat. Verify your interpretation in R.
 
-The p coefficient for people (-0.0609) indicates that the log odds ratio decreases by 0.061 with each additional person captured on a camera trap.
+The p coefficient for people (-0.0609) indicates that the log odds ratio decreases by 0.061 with each additional person captured on a camera trap. #### LOG ODDS DECREASE by 0.0609, while the LOG ODDS RATIO IS -0.0609
 
 ```{r}
 b <- coef(fit)
