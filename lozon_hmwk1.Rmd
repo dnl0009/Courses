@@ -1,0 +1,71 @@
+---
+title: "Homework 1"
+author: "Darien Lozon"
+date: "January 9, 2019"
+output: html_document
+---
+
+#### 1. Assume you have a linear model with $\beta$<sub>0</sub> = -2 and $\beta$<sub>1</sub> = 3. Use R to plot a line that corresponds to 100 equally-spaced values of x, ranging from -5 to 5.
+
+```{r}
+#### CODE FOR NUMBER ONE ####
+m <- 1
+x <- seq(from=-5,to=5,length.out=100)
+b <- -3
+y <- m * x + b
+plot(x=x,y=y,type='b',xlab="x",ylab="y",lty=5,col='cadetblue4',main='Number One Plot')
+lines(x=c(0,0),y=c(-8,2),lty=1)
+lines(x=c(-5,5),y=c(-3,-3))
+```
+
+---
+
+#### 2. Assume you have a linear model with parameters $\beta$<sub>0</sub> = -3, $\beta$<sub>1</sub> = 1, and $\beta$<sub>2</sub> = 4. What is the interpretation of $\beta$<sub>0</sub>? Verify in R. See _Linear Models_ slide 24 if you need help.
+
+##### $\beta$<sub>0</sub> identifies the value of the response variable (y) when **both** predictor variables (x<sub>1</sub> and x<sub>2</sub>) equal zero.
+
+```{r}
+b0 <- -3
+b1 <- 1
+b2 <- 4
+x1 <- 0
+x2 <- 0
+y <- b0 + b1 * x1 + b2 * x2
+y
+```
+
+---
+
+#### 3. Assume the same linear model as in (2) above. Interpret slop coefficient $\beta$<sub>2</sub>. Verify this interpretation in R. See _Linear Models_ slide 26 if you need help.
+
+##### $\beta$<sub>2</sub> indicates the amount increase with each x<sub>2</sub> unit increased when x<sub>1</sub> is held **constant**. 
+
+```{r}
+b0 <- -3
+b1 <- 1
+b2 <- 4
+x1 <- 2
+x2 <- 0
+x2a <- 1
+y <- b0 + b1 * x1 + b2 * x2
+ya <- b0 + b1 * x1 + b2 * x2a
+ya-y
+```
+
+---
+
+#### 4. Assume you have a linear model with a single categorical predictor. This categorical predictor can take 1 of 2 mutually exclusive levels. Demonstrate that the slope coefficient associated with 1 of the levels of this categorical predictor is the difference in the response variable y between the two levels of the predictor variable. If you need help, look to the interpretation of the slope coefficient on _Linear Models_, slide 18.
+
+```{r}
+b0 <- -2
+b1 <- 3
+xf <- 0
+xm <- 1
+ym <- b0 + b1 * xm
+yf <- b0 + b1 * xf
+ym-yf
+```
+
+---
+
+##### Le fin.

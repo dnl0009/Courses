@@ -1,0 +1,153 @@
+---
+title: 'Homework #8'
+author: "Darien Lozon"
+date: "April 11, 2019"
+output: html_document
+---
+
+1. Load data and place into an unmarkedFrameOccu object.
+
+```{r}
+setwd("C:/Users/Darien Lozon/Google Drive/SP19 Courses/WMAN633/")
+y <- read.csv('Bobcat.csv')
+bob_mat <- as.matrix(y)
+
+site_covs <- read.csv('psi covariates.csv')
+p <- read.csv('p covariates.csv')
+
+det_covs <- list(people=p)
+library(unmarked)
+occu_dat <- unmarkedFrameOccu(y=bob_mat,
+                          siteCovs=site_covs,
+                          obsCovs=det_covs)
+```
+
+---
+
+2. Assume the following candidate set of models: 
+
+Detection model |Occupancy model
+----------------|----------------
+intercept-only  |intercept-only
+people          |intercept-only
+intercept-only  |disturbance
+people          |disturbance
+
+Fit these models, and perform model selection with AIC. What is your top model? How do you know? Is there model selection uncertainty?
+
+```{r}
+fit1 <- occu(~1~1,occu_dat)
+fit2 <- occu(~people~1,occu_dat)
+fit3 <- occu(~1~Dist_5km,occu_dat)
+fit4 <- occu(~people~Dist_5km,occu_dat)
+
+cand.set <- list(
+  M1 = fit1, M2 = fit2, M3 = fit3, M4 = fit4
+)
+library(AICcmodavg)
+mods <- aictab(cand.set=cand.set,second.ord=F); mods
+```
+
+The top model turned out being model 3 (intercept-only detection and disturbance site covariate). This can be determined through the lowest AIC value, and the AIC weight is almost 75%. There is, however, slight uncertainty becasue the second-best model is only 1.97 points lower, which is within the 0-2 threshold, and I believe one of the only reasons why it is lower is because of the extra parameter that is likely penalizing it for over-parameterizing.
+
+---
+
+3. Average both the effect of people on detection and disturbance on occupancy over all models. Report model-averaged slope coefficients and 95% confidence intervals.
+
+```{r}
+ppl <- modavgShrink(cand.set=cand.set,
+                    parm='people',
+                    second.ord=F,
+                    parm.type='detect')
+dst <- modavgShrink(cand.set=cand.set,
+                    parm='Dist_5km',
+                    second.ord=F,
+                    parm.type='psi')
+
+ppl; dst
+```
+
+For people, the model-averaged slope coefficient is -0.02 with a 95% confidence interval including zero, which implies this variable is insignificant (-0.41,0.37).
+
+For disturbance within 5km, the model-averaged slope coefficient is -23.65 (REALLY BIG!) with a 95% confidence interval not including zero, which implies this variable is significant (-33.01,-14.3).
+
+---
+
+4. Obtain and plot model-averaged predictions of occupancy probability and detection probability. Average over all models, and make predictions over the observed range of each variable.
+
+```{r}
+## Find the range of values for people
+summary(occu_dat)
+min <- 0
+max <- 5.6
+
+new_dat <- data.frame(
+  people = seq(from=min, to=max,length.out=100)
+)
+
+avg_nd <- modavgPred(cand.set=cand.set,newdata=new_dat,
+                     second.ord=F,parm.type='detect')
+head(avg_nd)
+
+plot(y=avg_nd$mod.avg.pred,x=seq(from=min, to=max,length.out=100),
+     main='Model Averaged Predictions of Detection Probability',xlab='People (%)',
+     ylab='Detection Probability',type='l',ylim=c(0,1))
+lines(y=avg_nd$lower.CL,x=seq(from=min, to=max,length.out=100),lty=3,col='blue')
+lines(y=avg_nd$upper.CL,x=seq(from=min, to=max,length.out=100),lty=3,col='red')
+
+## Now for occupancy
+
+newdat1 <- data.frame(
+Dist_5km = seq(from=min(site_covs$Dist_5km),
+             to=max(site_covs$Dist_5km),length.out=100)
+)
+
+avgnd1 <- modavgPred(cand.set=cand.set,newdata=newdat1,
+                     second.ord=F,parm.type='psi')
+head(avgnd1)
+
+plot(y=avgnd1$mod.avg.pred,x=seq(from=min(site_covs$Dist_5km),
+                                 to=max(site_covs$Dist_5km),length.out=100),
+     main='Model Averaged Predictions of Occupancy Probability',
+     xlab='Disturbance within 5km',
+     ylab='Detection Probability',type='l',ylim=c(0,1))
+lines(y=avgnd1$lower.CL,x=seq(from=min(site_covs$Dist_5km), to=max(site_covs$Dist_5km),length.out=100),lty=3,col='blue')
+lines(y=avgnd1$upper.CL,x=seq(from=min(site_covs$Dist_5km), to=max(site_covs$Dist_5km),length.out=100),lty=3,col='red')
+```
+
+---
+
+5. Determine whether the top model is an adequate representation of the data-generating process. Use the sum of squared pearsons residuals (function below) as your test statistic. Report the test statistic obtained from fitted data, and generate 1000 realizations of the test statistic from simulated data (be patient, this may take a while). Obtain a p-value using your observed test statitic and the simulated distribution of test statistics. What null hypothesis are you evaluating? Do you reject or fail to reject this null hypothesis? What is the implication for evaluating goodness of fit?
+
+```{r}
+# Top model
+summary(fit3)
+chisq <- function(mod){ # mod is fitted model
+  obs <- getY(mod@data) # observed
+  ex <- fitted(mod) # expected
+  ts <- ((ex - obs) ^ 2) / (ex * (1 - ex))
+return(sum(ts,na.rm=TRUE))
+}
+
+chisq(fit3)
+```
+
+```{r}
+library(unmarked)
+sims <- parboot(object=fit3,statistic=chisq,nsim=400) # Couldn't do 1000 iterations
+hist(sims@t.star[,1],xlab='chisq',
+     main='Distribution of Test Statistic')
+lines(x=rep(chisq(fit3),2),
+      y=c(0,1000),
+      col='red',lty=3)
+
+
+# Null hypothesis testing
+
+sum(sims@t.star[,1] > chisq(fit3))/400
+```
+The null hypothesis is that the fitted model is the data-generating model. Because the p-value is 0.795, we can fail to reject the null hypothesis and conclude that this fit model (model 3) is the data-generating model.
+
+---
+
+Le fin.

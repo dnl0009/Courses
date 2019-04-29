@@ -1,0 +1,67 @@
+---
+title: 'Homework #2'
+author: "Darien Lozon"
+date: "January 17, 2019"
+output: html_document
+---
+
+#### Under the homework link I have included an example dataset. These data were obtained from annual surveys of unvegetated beach area of saline lakes in North Dakota. Piping Plovers nest on these beaches, but only in invegetated areas. Therefore, maintaining open beaches is important for conservation of this sensitive species. Use linear regression to determine how beach areas change through time. The variables are:
+
+* BeachID: categorical variable, unique identification for each beach
+* Year: continuous variable, year the beach area was measured
+* OpenBeach: continuous variable, the area in hectares of open beach
+
+#### 1. Import the "beach.csv" dataset into R and examine the first few rows of data.
+
+```{r}
+setwd("C:/Users/dnl0009/Desktop/")
+beach <- read.csv("beach.csv",header=TRUE)
+head(beach,10)
+```
+
+---
+
+#### 2. Fit a model that includes interactions between Year and BeachID. Report estimates of all coefficients.
+
+```{r}
+fit_yxb <- lm(OpenBeach~Year + BeachID + Year*BeachID,beach)
+coef(fit_yxb)
+```
+
+---
+
+#### 3. Predict the beach area at all three beaches at year 1 (1992).
+
+```{r}
+betas <- coef(fit_yxb) 
+# Confusing because regression begins with beta-0, but it'll come with time, I'm sure.
+betas[1] + betas[2] * 1992 # For Beach A
+betas[1] + betas[2] * 1992 + betas[3] + betas[5] * 1992 # For Beach B
+betas[1] + betas[2] * 1992 + betas[4] + betas[6] * 1992 # For Beach C
+```
+
+---
+
+#### 4. Plot the predicted area of each beach across all years.
+
+```{r}
+betas <- coef(fit_yxb)
+beachA <- betas[1] + betas[2] * c(1992:2014)
+beachB <- betas[1] + betas[2] * c(1992:2014) + betas[3] + betas[5] * c(1992:2014)
+beachC <- betas[1] + betas[2] * c(1992:2014) + betas[4] + betas[6] * c(1992:2014)
+plot(beachA,type='l',col="red",xlab="Year Number", ylab="Open Beach (ha)", main="Estimated Open Beach from 1992 to 2014")
+abline(h=0,lty=3)
+lines(beachB,col="blue")
+lines(beachC,col="green")
+legend(18,320,legend=c("Beach A","Beach B","Beach C"),fill=c("red","blue","green"))
+```
+
+---
+
+#### 5. Interpret the rate of beach area change at each of the 3 beaches.
+
+##### Beach A gets the short end of the stick on this one. 'Year' obviously has a negative influence on open beach (see Beach A) likely due to succession (e.g. vegetative encroachment), leading to possible increased nest predation and decreased suitable nesting habitat for the plovers. The interaction term Yr*BeachID slows the decrease in open beach for Beaches B and C because of those positive interaction coefficients (17.04 and 14.37, respectively). That slower decrease in open beach over the course of 12 years is ideal for managers so they can keep on top of clearing the beach (if that is their chosen management decision). This highly influencial interaction term means that each beach needs to be treated differently given their difference in size and structure (even though Beach A has more open beach to start with (~363 ha), it must have a healthy/aggressive ecotone to experience such a drastic rate of succession).
+
+---
+
+Le fin.

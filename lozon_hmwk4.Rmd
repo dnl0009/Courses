@@ -1,0 +1,108 @@
+---
+title: 'Homework #4'
+author: "Darien Lozon"
+date: "February 14, 2019"
+output: html_document
+---
+
+###**1. Fit a logistic regression model that assumes the probability of success is an additive function of variables x1 and x2.**
+
+```{r}
+setwd("C:/Users/dnl0009/Google Drive/SP19 Courses/WMAN633/")
+data <- read.csv("Homework 4 Data.csv")
+fit <- glm(y~x1+x2,binomial,data); summary(fit)
+```
+
+---
+
+###**2. Interpret the effect of variable x1 on the log odds of success. Verify your interpretation in R.**
+
+The regression coefficient for x1 is the log odds ratio regarding a 1-unit change in the predictor.
+
+```{r}
+b <- coef(fit)
+zilch <- plogis(b[1] + b[3]) # x1 = 0; need the plogis function to bind to (0,1)
+one <- plogis(b[1] + b[2] + b[3]) # x1 = 1
+log((one/(1-one)) / (zilch/(1-zilch))) # Log odds ratio
+summary(fit)[['coefficients']]['x1','Estimate'] # Woo, they're the same. :)
+```
+
+---
+
+###**3. Interpret the effect of variable x2 on the log odds of success. Verify your interpretation in R.**
+
+The regression coefficient for x2 is the difference in the log odds ratio between categories A and B.
+
+```{r}
+pA <- plogis(b[1] + b[2]) #x2 = 0
+pB <- plogis(b[1] + b[2] + b[3]) #x2 = 1
+log((pB/(1-pB))/(pA/(1-pA)))
+summary(fit)[['coefficients']]['x2b','Estimate'] # Woo, they're the same. :)
+```
+
+---
+
+###**4. Duplicate the Wald Test and p-values for variables x1 and x2 performed by the glm() function. Do you reject or fail to reject your null hypothesis?**
+
+**Wald test for x1:**
+```{r}
+b1 <- b[2]
+se <- summary(fit)[['coefficients']]['x1','Std. Error']
+Wald1 <- b1/se; Wald1 # Calculate and call test statistic
+summary(fit)[['coefficients']]['x1','z value'] # Compare to model output
+```
+
+**P-value for x1:**
+```{r}
+# P-value for x1
+p1 <- 2 * pnorm(-1 * abs(Wald1), mean=0, sd=1); p1 # Calculate and call p-value
+summary(fit)[['coefficients']]['x1','Pr(>|z|)'] # Compare
+```
+
+With a p-value of 0.645, it is clear that the null hypothesis will _not_ be rejected.
+
+**Wald test for x2:**
+```{r}
+b2 <- b[3]
+se <- summary(fit)[['coefficients']]['x2b','Std. Error']
+Wald2 <- b2/se; Wald2
+summary(fit)[['coefficients']]['x2b','z value']
+```
+
+**P-value for x2:**
+```{r}
+p2 <- 2 * pnorm(-1 * abs(Wald2), mean=0, sd=1); p2
+summary(fit)[['coefficients']]['x2b','Pr(>|z|)']
+```
+
+With a p-value of 0.019, there is a bit of gray area as to whether or not the null hypothesis should be rejected. With an alpha value of 0.05, the null hypothesis certainly would be rejected; however, with an alpha value of 0.01, the interpretation is a bit less clear.
+
+---
+
+###**5. Predict and plot the mean probability of success over the range of values of x1.**
+
+**Prediction**
+```{r}
+y <- b[1] + b[2] * mean(data$x1) + b[3]; y
+yexp <- exp(y) / (1+exp(y)); yexp
+plogis(y) # Same. Yay!
+```
+
+**Plot**
+```{r}
+x1 <- seq(mean(data$x1),max(data$x1),length.out=100)
+ypred <- plogis(b[1] + b[2] * x1 + b[3]) # Category B
+plot(x=x1,y=ypred,type='l',xlab='x1',ylab='Probability')
+```
+
+This plot doesn't look very sigmoidal. Prior to looking at the lecture slides, I got the following plot and like this one better.
+
+```{r}
+x1 <- seq(-10,10,length.out=1000)
+ypred <- plogis(b[1] + b[2] * x1 + b[3]) # Category B
+plot(x=x1,y=ypred,type='l',xlab='x1',ylab='Probability')
+```
+
+---
+
+_Le fin._
