@@ -146,7 +146,7 @@ lines(x=rep(chisq(fit3),2),
 
 sum(sims@t.star[,1] > chisq(fit3))/400
 ```
-The null hypothesis is that the fitted model is the data-generating model. Because the p-value is 0.795, we can fail to reject the null hypothesis and conclude that this fit model (model 3) is the data-generating model.
+The null hypothesis is that the fitted model is the data-generating model. Because the p-value is 0.795, we can fail to reject the null hypothesis and conclude that this fit model (model 3) is the data-generating model. \\\\ FAIL TO REJECT THE HYPOTHESIS THAT IT ISN'T THE DATA-GENERATING MODEL (IT'S PROBABLY A REALLY GOOD APPROXIMATION).
 
 ---
 
